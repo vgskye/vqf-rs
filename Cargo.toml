@@ -1,0 +1,18 @@
+[package]
+name = "vqf-rs"
+authors = ["Skye <me@skye.vg>"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[features]
+default = ["libm", "f32", "motion-bias-estimation"]
+std = []
+libm = ["dep:libm"]
+f32 = []
+motion-bias-estimation = []
+
+[dependencies]
+katexit = "0.1.4"
+libm = { version = "0.2.8", optional = true }
+zerocopy = "0.7.32"
