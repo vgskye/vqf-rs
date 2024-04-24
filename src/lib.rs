@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "f32"), allow(clippy::unnecessary_cast))]
 //! An implementation of the VQF IMU orientation estimation filter in pure Rust.
 //!
 //! This is, currently, a pretty direct port of the C++ implemenataion in <https://github.com/dlaidig/vqf>;
