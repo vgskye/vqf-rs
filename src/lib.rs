@@ -1,11 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 //! An implementation of the VQF IMU orientation estimation filter in pure Rust.
-//! 
+//!
 //! This is, currently, a pretty direct port of the C++ implemenataion in <https://github.com/dlaidig/vqf>;
 //! further efforts to make the code more idiomatic may be helpful.
-//! 
+//!
 //! The main entry point for this crate is [`VQF`]; look there to get started.
-//! 
+//!
 //! This crate supports `no_std` as well as `std`; if `std` is active, `libm` should be inactive.
 
 #[cfg(feature = "f32")]
@@ -132,8 +132,8 @@ impl<const M: usize, const N: usize, const P: usize> Mul<Matrix<P, N>> for Matri
 
     fn mul(self, rhs: Matrix<P, N>) -> Self::Output {
         let mut out: Matrix<P, M> = Default::default();
-        for i in 1..M {
-            for j in 1..P {
+        for i in 0..M {
+            for j in 0..P {
                 let mut val = 0.0;
                 for k in 0..N {
                     val += self.0[i][k] * rhs.0[k][j];
@@ -156,8 +156,8 @@ impl<const W: usize, const H: usize> Add for Matrix<W, H> {
 
     fn add(self, rhs: Self) -> Self::Output {
         let mut out: Self = Default::default();
-        for i in 1..W {
-            for j in 1..H {
+        for i in 0..W {
+            for j in 0..H {
                 out.0[j][i] = self.0[j][i] + rhs.0[j][i];
             }
         }
@@ -176,8 +176,8 @@ impl<const W: usize, const H: usize> Sub for Matrix<W, H> {
 
     fn sub(self, rhs: Self) -> Self::Output {
         let mut out: Self = Default::default();
-        for i in 1..W {
-            for j in 1..H {
+        for i in 0..W {
+            for j in 0..H {
                 out.0[j][i] = self.0[j][i] - rhs.0[j][i];
             }
         }
@@ -194,8 +194,8 @@ impl<const W: usize, const H: usize> SubAssign for Matrix<W, H> {
 impl<const W: usize, const H: usize> Matrix<W, H> {
     pub fn transpose(self) -> Matrix<H, W> {
         let mut out: Matrix<H, W> = Default::default();
-        for i in 1..W {
-            for j in 1..H {
+        for i in 0..W {
+            for j in 0..H {
                 out.0[i][j] = self.0[j][i];
             }
         }
@@ -755,18 +755,23 @@ fn abs(t: Float) -> Float {
 #[cfg_attr(doc, katexit::katexit)]
 impl VQF {
     /// Creates a new VQF instance.
-    /// 
+    ///
     /// In the most common case (using the default parameters and all data being sampled with the same frequency,
     /// create the class like this:
     /// ```rust
     /// # use vqf_rs::VQF;
     /// let vqf = VQF::new(0.01, None, None, None); // 0.01 s sampling time, i.e. 100 Hz
     /// ```
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if `gyr_ts`, `acc_ts`, or `mag_ts` is negative.
-    pub fn new(gyr_ts: Float, acc_ts: Option<Float>, mag_ts: Option<Float>, params: Option<Params>) -> Self {
+    pub fn new(
+        gyr_ts: Float,
+        acc_ts: Option<Float>,
+        mag_ts: Option<Float>,
+        params: Option<Params>,
+    ) -> Self {
         let mut ret = Self {
             params: params.unwrap_or_default(),
             state: Default::default(),
@@ -780,7 +785,7 @@ impl VQF {
     }
 
     /// Performs gyroscope update step, using the measurement in rad/s.
-    /// 
+    ///
     /// It is only necessary to call this function directly if gyroscope, accelerometers and magnetometers have
     /// different sampling rates. Otherwise, simply use [`update()`](Self::update()).
     pub fn update_gyr(&mut self, gyr: [Float; 3]) {
@@ -838,10 +843,10 @@ impl VQF {
     }
 
     /// Performs accelerometer update step, using the measurement in m/s².
-    /// 
+    ///
     /// It is only necessary to call this function directly if gyroscope, accelerometers and magnetometers have
     /// different sampling rates. Otherwise, simply use [`update()`](Self::update()).
-    /// 
+    ///
     /// Should be called after [`update_gyr()`](Self::update_gyr()) and before [`update_mag()`](Self::update_mag()).
     pub fn update_acc(&mut self, acc: [Float; 3]) {
         // ignore [0 0 0] samples
@@ -890,7 +895,7 @@ impl VQF {
         );
 
         // transform to 6D earth frame and normalize
-        let mut acc_earth = self.state.gyr_quat.rotate(self.state.last_acc_lp);
+        let mut acc_earth = self.state.acc_quat.rotate(self.state.last_acc_lp);
         Self::normalize(&mut acc_earth);
 
         // inclination correction
@@ -1082,10 +1087,10 @@ impl VQF {
     }
 
     /// Performs magnetometer update step.
-    /// 
+    ///
     /// It is only necessary to call this function directly if gyroscope, accelerometers and magnetometers have
     /// different sampling rates. Otherwise, simply use [`update()`](Self::update()).
-    /// 
+    ///
     /// Should be called after [`update_acc()`](Self::update_acc()).
     pub fn update_mag(&mut self, mag: [Float; 3]) {
         // ignore [0 0 0] samples
@@ -1490,7 +1495,7 @@ impl VQF {
     }
 
     /// Gets the current state for modification.
-    /// 
+    ///
     /// This method allows to set a completely arbitrary filter state and is intended for debugging purposes.
     pub fn state_mut(&mut self) -> &mut State {
         &mut self.state
@@ -1746,5 +1751,62 @@ impl VQF {
 
 #[cfg(test)]
 mod tests {
-    // TODO
+    use crate::{Params, Quaternion, VQF};
+
+    #[test]
+    fn basic_parity() {
+        for mode in 0..=5 {
+            let params = match mode {
+                0 => Default::default(),
+                1 => Params {
+                    mag_dist_rejection_enabled: false,
+                    ..Default::default()
+                },
+                2 => Params {
+                    rest_bias_est_enabled: false,
+                    ..Default::default()
+                },
+                3 => Params {
+                    motion_bias_est_enabled: false,
+                    ..Default::default()
+                },
+                4 => Params {
+                    rest_bias_est_enabled: false,
+                    motion_bias_est_enabled: false,
+                    ..Default::default()
+                },
+                5 => Params {
+                    mag_dist_rejection_enabled: false,
+                    rest_bias_est_enabled: false,
+                    motion_bias_est_enabled: false,
+                    ..Default::default()
+                },
+                _ => panic!(),
+            };
+            let expected: Quaternion = match mode {
+                0 => [0.499972, 0.499973, 0.500027, 0.500027].into(),
+                1 => [0.499986, 0.499987, 0.500014, 0.500014].into(),
+                2 => [0.451372, 0.453051, 0.543672, 0.543534].into(),
+                3 => [0.499972, 0.499973, 0.500027, 0.500027].into(),
+                4 => [0.424517, 0.454377, 0.555262, 0.552279].into(),
+                5 => [0.448694, 0.478657, 0.534473, 0.532823].into(),
+                _ => panic!(),
+            };
+            let mut vqf = VQF::new(0.01, None, None, Some(params));
+
+            let gyr = [0.01; 3];
+            let acc = [0.0, 9.8, 0.0];
+            let mag = [0.5, 0.8, 0.0];
+
+            for _ in 0..10000 {
+                vqf.update(gyr, acc, Some(mag))
+            }
+
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - expected.0).abs() < 1e-6);
+            assert!((quat.1 - expected.1).abs() < 1e-6);
+            assert!((quat.2 - expected.2).abs() < 1e-6);
+            assert!((quat.3 - expected.3).abs() < 1e-6);
+        }
+    }
 }
