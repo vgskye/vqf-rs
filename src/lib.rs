@@ -11,15 +11,15 @@
 #[cfg(feature = "f32")]
 /// Typedef for the floating-point data type used for most operations.
 ///
-/// By default, all floating-point calculations are performed using `f32`. Disable the `f32` crate feature to
-/// change this type to `f64`. Note that the Butterworth filter implementation will always use `f64` as
+/// By default, all floating-point calculations are performed using `f64`. Enable the `f32` crate feature to
+/// change this type to `f32`. Note that the Butterworth filter implementation will always use `f64` as
 /// using `f32` can cause numeric issues.
 pub type Float = f32;
 #[cfg(not(feature = "f32"))]
 /// Typedef for the floating-point data type used for most operations.
 ///
-/// By default, all floating-point calculations are performed using `f32`. Disable the `f32` crate feature to
-/// change this type to `f64`. Note that the Butterworth filter implementation will always use `f64` as
+/// By default, all floating-point calculations are performed using `f64`. Enable the `f32` crate feature to
+/// change this type to `f32`. Note that the Butterworth filter implementation will always use `f64` as
 /// using `f32` can cause numeric issues.
 pub type Float = f64;
 
@@ -1784,12 +1784,12 @@ mod tests {
                 _ => panic!(),
             };
             let expected: Quaternion = match mode {
-                0 => [0.499972, 0.499973, 0.500027, 0.500027].into(),
-                1 => [0.499986, 0.499987, 0.500014, 0.500014].into(),
-                2 => [0.451372, 0.453051, 0.543672, 0.543534].into(),
-                3 => [0.499972, 0.499973, 0.500027, 0.500027].into(),
-                4 => [0.424517, 0.454377, 0.555262, 0.552279].into(),
-                5 => [0.448694, 0.478657, 0.534473, 0.532823].into(),
+                0 => [0.499988, 0.499988, 0.500012, 0.500012].into(),
+                1 => [0.5, 0.5, 0.5, 0.5].into(),
+                2 => [0.451372, 0.453052, 0.543672, 0.543533].into(),
+                3 => [0.499988, 0.499988, 0.500012, 0.500012].into(),
+                4 => [0.424513, 0.454375, 0.555264, 0.55228].into(),
+                5 => [0.44869, 0.478654, 0.534476, 0.532825].into(),
                 _ => panic!(),
             };
             let mut vqf = VQF::new(0.01, None, None, Some(params));
@@ -1807,6 +1807,388 @@ mod tests {
             assert!((quat.1 - expected.1).abs() < 1e-6);
             assert!((quat.2 - expected.2).abs() < 1e-6);
             assert!((quat.3 - expected.3).abs() < 1e-6);
+        }
+    }
+
+    #[allow(clippy::approx_constant)]
+    #[allow(non_snake_case)]
+    mod wigwagwent_tests {
+        use crate::{Params, VQF};
+
+    
+        #[test]
+        fn single_same_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            vqf.update_gyr(gyr);
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 1.0).abs() < 1e-6);
+            assert!((quat.1 - 0.000105).abs() < 1e-6);
+            assert!((quat.2 - 0.000105).abs() < 1e-6);
+            assert!((quat.3 - 0.000105).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_x_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.25, 0.0, 0.0];
+            vqf.update_gyr(gyr);
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 0.9999999).abs() < 1e-6);
+            assert!((quat.1 - 0.00125).abs() < 1e-6);
+            assert!((quat.2 - 0.0).abs() < 1e-6);
+            assert!((quat.3 - 0.0).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_y_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.0, 0.25, 0.0];
+            vqf.update_gyr(gyr);
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 0.9999999).abs() < 1e-6);
+            assert!((quat.1 - 0.0).abs() < 1e-6);
+            assert!((quat.2 - 0.00125).abs() < 1e-6);
+            assert!((quat.3 - 0.0).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_z_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.0, 0.0, 0.25];
+            vqf.update_gyr(gyr);
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 0.9999999).abs() < 1e-6);
+            assert!((quat.1 - 0.0).abs() < 1e-6);
+            assert!((quat.2 - 0.0).abs() < 1e-6);
+            assert!((quat.3 - 0.00125).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_different_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.054, 0.012, -0.9];
+            vqf.update_gyr(gyr);
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 0.99999).abs() < 1e-6);
+            assert!((quat.1 - 0.000269999).abs() < 1e-6);
+            assert!((quat.2 - 5.99998e-5).abs() < 1e-6);
+            assert!((quat.3 - -0.00449998).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_same_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            for _ in 0..10_000 {
+                vqf.update_gyr(gyr);
+            }
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - -0.245327).abs() < 1e-6); //slightly different results
+            assert!((quat.1 - 0.559707).abs() < 1e-6);
+            assert!((quat.2 - 0.559707).abs() < 1e-6);
+            assert!((quat.3 - 0.559707).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_different_3D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.054, 0.012, -0.09];
+            for _ in 0..10_000 {
+                vqf.update_gyr(gyr);
+            }
+    
+            let quat = vqf.quat_3d();
+            assert!((quat.0 - 0.539342).abs() < 1e-6); //slightly different results
+            assert!((quat.1 - -0.430446).abs() < 1e-6);
+            assert!((quat.2 - -0.0956546).abs() < 1e-6);
+            assert!((quat.3 - 0.71741).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_same_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            vqf.update_gyr(gyr);
+            vqf.update_acc(acc);
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.888074).abs() < 1e-6);
+            assert!((quat.1 - 0.325117).abs() < 1e-6);
+            assert!((quat.2 - -0.324998).abs() < 1e-6);
+            assert!((quat.3 - 0.00016151).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_x_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [9.81, 0.0, 0.0];
+            vqf.update(gyr, acc, None);
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.707107).abs() < 1e-6);
+            assert!((quat.1 - 0.000148508).abs() < 1e-6);
+            assert!((quat.2 - -0.707107).abs() < 1e-6);
+            assert!((quat.3 - 0.000148508).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_y_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [0.0, 9.81, 0.0];
+            vqf.update(gyr, acc, None);
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.707107).abs() < 1e-6);
+            assert!((quat.1 - 0.707107).abs() < 1e-6);
+            assert!((quat.2 - 0.000148477).abs() < 1e-6);
+            assert!((quat.3 - 0.000148477).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_z_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [0.0, 0.0, 9.81];
+            vqf.update(gyr, acc, None);
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 1.0).abs() < 1e-6);
+            assert!((quat.1 - -1.72732e-20).abs() < 1e-6);
+            assert!((quat.2 - -4.06576e-20).abs() < 1e-6);
+            assert!((quat.3 - 0.000105).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_different_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [4.5, 6.7, 3.2];
+            vqf.update(gyr, acc, None);
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.827216).abs() < 1e-6);
+            assert!((quat.1 - 0.466506).abs() < 1e-6);
+            assert!((quat.2 - -0.313187).abs() < 1e-6);
+            assert!((quat.3 - 0.000168725).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_same_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+    
+            for _ in 0..10_000 {
+                vqf.update(gyr, acc, None);
+            }
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.887649).abs() < 1e-6); //Look into why there is so
+            assert!((quat.1 - 0.334951).abs() < 1e-6); // much difference between them
+            assert!((quat.2 - -0.314853).abs() < 1e-6); // we use f32 math, they use mostly double math
+            assert!((quat.3 - 0.0274545).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_different_6D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [4.5, 6.7, 3.2];
+    
+            for _ in 0..10_000 {
+                vqf.update(gyr, acc, None);
+            }
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.826852).abs() < 1e-6); //Look into why there is so
+            assert!((quat.1 - 0.475521).abs() < 1e-6); // much difference between them
+            assert!((quat.2 - -0.299322).abs() < 1e-6); // we use f32 math, they use mostly double math
+            assert!((quat.3 - 0.0245133).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_same_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [10.0, 10.0, 10.0];
+            vqf.update_gyr(gyr);
+            vqf.update_acc(acc);
+            vqf.update_mag(mag);
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.86428).abs() < 1e-6);
+            assert!((quat.1 - 0.391089).abs() < 1e-6);
+            assert!((quat.2 - -0.241608).abs() < 1e-6);
+            assert!((quat.3 - 0.204195).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_x_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [10.0, 0.0, 0.0];
+            vqf.update(gyr, acc, Some(mag));
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.540625).abs() < 1e-6);
+            assert!((quat.1 - 0.455768).abs() < 1e-6);
+            assert!((quat.2 - 0.060003).abs() < 1e-6);
+            assert!((quat.3 - 0.704556).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_y_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [0.0, 10.0, 0.0];
+            vqf.update(gyr, acc, Some(mag));
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.880476).abs() < 1e-6);
+            assert!((quat.1 - 0.279848).abs() < 1e-6);
+            assert!((quat.2 - -0.364705).abs() < 1e-6);
+            assert!((quat.3 - -0.115917).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_z_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [0.0, 0.0, 10.0];
+            vqf.update(gyr, acc, Some(mag));
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.339851).abs() < 1e-6);
+            assert!((quat.1 - -0.17592).abs() < 1e-6);
+            assert!((quat.2 - -0.424708).abs() < 1e-6);
+            assert!((quat.3 - -0.820473).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn single_different_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [3.54, 6.32, -2.34];
+            vqf.update(gyr, acc, Some(mag));
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.864117).abs() < 1e-6);
+            assert!((quat.1 - 0.391281).abs() < 1e-6);
+            assert!((quat.2 - -0.241297).abs() < 1e-6);
+            assert!((quat.3 - 0.204882).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_same_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [10.0, 10.0, 10.0];
+    
+            for _ in 0..10_000 {
+                vqf.update(gyr, acc, Some(mag));
+            }
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.338005).abs() < 1e-6); //Look into why there is so
+            assert!((quat.1 - -0.176875).abs() < 1e-6); // much difference between them
+            assert!((quat.2 - -0.424311).abs() < 1e-6); // we use f32 math, they use mostly double math
+            assert!((quat.3 - -0.821236).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn many_different_9D_quat() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.021, 0.021, 0.021];
+            let acc = [5.663806, 5.663806, 5.663806];
+            let mag = [3.54, 6.32, -2.34];
+    
+            for _ in 0..10_000 {
+                vqf.update(gyr, acc, Some(mag));
+            }
+    
+            let quat = vqf.quat_9d();
+            assert!((quat.0 - 0.864111).abs() < 1e-6); //Look into why there is so
+            assert!((quat.1 - 0.391288).abs() < 1e-6); // much difference between them
+            assert!((quat.2 - -0.241286).abs() < 1e-6); // we use f32 math, they use mostly double math
+            assert!((quat.3 - 0.204906).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn run_vqf_cpp_example() {
+            let mut vqf = VQF::new(0.01, None, None, None);
+    
+            let gyr = [0.01745329; 3];
+            let acc = [5.663806; 3];
+    
+            for _ in 0..6000 {
+                vqf.update(gyr, acc, None);
+            }
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.887781).abs() < 1e-6);
+            assert!((quat.1 - 0.333302).abs() < 1e-6);
+            assert!((quat.2 - -0.316598).abs() < 1e-6);
+            assert!((quat.3 - 0.0228175).abs() < 1e-6);
+        }
+    
+        #[test]
+        fn run_vqf_cpp_example_basic() {
+            let mut vqf = VQF::new(0.01, None, None, Some(Params {
+                rest_bias_est_enabled: false,
+                motion_bias_est_enabled: false,
+                mag_dist_rejection_enabled: false,
+                ..Default::default()
+            }));
+    
+            let gyr = [0.01745329; 3];
+            let acc = [5.663806; 3];
+    
+            for _ in 0..6000 {
+                vqf.update(gyr, acc, None);
+            }
+    
+            let quat = vqf.quat_6d();
+            assert!((quat.0 - 0.547223).abs() < 1e-6);
+            assert!((quat.1 - 0.456312).abs() < 1e-6);
+            assert!((quat.2 - 0.055717).abs() < 1e-6);
+            assert!((quat.3 - 0.699444).abs() < 1e-6);
         }
     }
 }

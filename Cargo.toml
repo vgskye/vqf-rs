@@ -6,7 +6,7 @@ edition = "2021"
 license = "MIT"
 
 [features]
-default = ["libm", "f32", "motion-bias-estimation"]
+default = ["std", "motion-bias-estimation"]
 std = []
 libm = ["dep:libm"]
 f32 = []
