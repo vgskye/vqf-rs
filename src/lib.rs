@@ -253,7 +253,7 @@ impl Matrix<3, 3> {
 /// The parameters influence the behavior of the algorithm and are independent of the sampling rate of the IMU data. The
 /// constructor sets all parameters to the default values.
 ///
-/// The parameters [`motion_bias_est_enabled`](Self::motion_bias_est_enabled), [`rest_bias_est_enabled`](Self::rest_bias_est_enabled), and [mag_dist_rejection_enabled`](Self::mag_dist_rejection_enabled) can be used to enable/disable
+/// The parameters [`motion_bias_est_enabled`](Self::motion_bias_est_enabled), [`rest_bias_est_enabled`](Self::rest_bias_est_enabled), and [`mag_dist_rejection_enabled`](Self::mag_dist_rejection_enabled) can be used to enable/disable
 /// the main features of the VQF algorithm. The time constants [`tau_acc`](Self::tau_acc) and [`tau_mag`](Self::tau_mag) can be tuned to change the trust on
 /// the accelerometer and magnetometer measurements, respectively. The remaining parameters influence bias estimation
 /// and magnetometer rejection.

@@ -5,7 +5,7 @@ repository = "https://github.com/vgskye/vqf-rs"
 categories = ["algorithms", "mathematics", "science::robotics", "no-std::no-alloc"]
 keywords = ["imu", "sensor-fusion", "vqf"]
 authors = ["Skye <me@skye.vg>"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 
