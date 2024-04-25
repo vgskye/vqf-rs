@@ -1,5 +1,9 @@
 [package]
 name = "vqf-rs"
+description = "A `no-std`, dependency-free port of VQF sensor fusion algorithm for IMUs."
+repository = "https://github.com/vgskye/vqf-rs"
+categories = ["algorithms", "mathematics", "science::robotics", "no-std::no-alloc"]
+keywords = ["imu", "sensor-fusion", "vqf"]
 authors = ["Skye <me@skye.vg>"]
 version = "0.1.0"
 edition = "2021"
@@ -13,6 +17,4 @@ f32 = []
 motion-bias-estimation = []
 
 [dependencies]
-katexit = "0.1.4"
 libm = { version = "0.2.8", optional = true }
-zerocopy = "0.7.32"

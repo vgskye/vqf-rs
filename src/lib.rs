@@ -7,7 +7,7 @@
 //!
 //! The main entry point for this crate is [`VQF`]; look there to get started.
 //!
-//! This crate supports `no_std` as well as `std`; if `std` is active, `libm` should be inactive.
+//! This crate optionally supports `no_std`; the `libm` crate feature is required in `no_std` environments.
 
 #[cfg(feature = "f32")]
 /// Typedef for the floating-point data type used for most operations.
@@ -38,7 +38,11 @@ use core::{
     ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
-use zerocopy::transmute_mut;
+fn flatten<const N: usize, const M: usize, const R: usize>(value: &mut [[Float; N]; M]) -> &mut [Float; R] {
+    assert_eq!(N * M, R);
+    // SAFETY: `[[T; N]; M]` is layout-identical to `[T; N * M]`
+    unsafe { core::mem::transmute(value) }
+}
 
 /// A quaternion.
 ///
@@ -253,7 +257,7 @@ impl Matrix<3, 3> {
 /// the main features of the VQF algorithm. The time constants [`tau_acc`](Self::tau_acc) and [`tau_mag`](Self::tau_mag) can be tuned to change the trust on
 /// the accelerometer and magnetometer measurements, respectively. The remaining parameters influence bias estimation
 /// and magnetometer rejection.
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(doc, doc = include_str!("../katex.html"))]
 #[derive(Clone, Copy)]
 pub struct Params {
     /// Time constant $\tau_\mathrm{acc}$ for accelerometer low-pass filtering in seconds.
@@ -499,7 +503,7 @@ impl Default for Params {
 ///
 /// Direct access to the full state is typically not needed but can be useful in some cases, e.g. for debugging. For this
 /// purpose, the state can be accessed by [`VQF::state()`] and set by [`VQF::state_mut()`].
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(doc, doc = include_str!("../katex.html"))]
 #[derive(Clone, Copy, Default)]
 pub struct State {
     /// Angular velocity strapdown integration quaternion $^{\mathcal{S}\_i}_{\mathcal{I}\_i}\mathbf{q}$.
@@ -648,7 +652,7 @@ pub struct State {
 ///
 /// Coefficients are values that depend on the parameters and the sampling times, but do not change during update steps.
 /// They are calculated in [`VQF::new()`].
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(doc, doc = include_str!("../katex.html"))]
 #[derive(Clone, Copy, Default)]
 pub struct Coefficients {
     /// Sampling time of the gyroscope measurements (in seconds).
@@ -753,7 +757,7 @@ fn abs(t: Float) -> Float {
     return Math::<Float>::fabs(t);
 }
 
-#[cfg_attr(doc, katexit::katexit)]
+#[cfg_attr(doc, doc = include_str!("../katex.html"))]
 impl VQF {
     /// Creates a new VQF instance.
     ///
@@ -958,7 +962,7 @@ impl VQF {
                 ];
 
                 // low-pass filter R and R*b_hat
-                let r_arr: &mut [Float; 9] = transmute_mut!(&mut r.0);
+                let r_arr: &mut [Float; 9] = flatten(&mut r.0);
                 Self::filter_vec(
                     *r_arr,
                     self.params.tau_acc,
