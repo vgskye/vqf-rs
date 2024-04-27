@@ -7,7 +7,8 @@
 //!
 //! The main entry point for this crate is [`VQF`]; look there to get started.
 //!
-//! This crate optionally supports `no_std`; the `libm` crate feature is required in `no_std` environments.
+//! This crate needs a library for floating-point arithmetic; currently `std`, `libm`, and `micromath` is supported.
+//! Notably, `micromath` implies `f32` as `micromath` does not provide `f64` arithmetic.
 
 #[cfg(feature = "f32")]
 /// Typedef for the floating-point data type used for most operations.
@@ -24,10 +25,95 @@ pub type Float = f32;
 /// using `f32` can cause numeric issues.
 pub type Float = f64;
 
-#[cfg(feature = "std")]
-type Math<T> = T;
+#[cfg(any(feature = "std", feature = "micromath"))]
+mod math {
+    use crate::Float;
+    #[cfg(feature = "micromath")]
+    use micromath::F32Ext;
+
+    pub fn sqrt(value: Float) -> Float {
+        value.sqrt()
+    }
+
+    pub fn fabs(value: Float) -> Float {
+        value.abs()
+    }
+
+    pub fn exp(value: Float) -> Float {
+        value.exp()
+    }
+
+    pub fn sin(value: Float) -> Float {
+        value.sin()
+    }
+
+    pub fn cos(value: Float) -> Float {
+        value.cos()
+    }
+
+    #[cfg(feature = "std")]
+    pub fn tan_f64(value: f64) -> f64 {
+        value.tan()
+    }
+
+    #[cfg(feature = "micromath")]
+    pub fn tan_f64(value: f64) -> f64 {
+        (value as f32).tan() as f64
+    }
+
+    pub fn asin(value: Float) -> Float {
+        value.asin()
+    }
+
+    pub fn acos(value: Float) -> Float {
+        value.acos()
+    }
+
+    pub fn atan2(value: Float, other: Float) -> Float {
+        value.atan2(other)
+    }
+}
+
 #[cfg(feature = "libm")]
-type Math<T> = libm::Libm<T>;
+mod math {
+    use crate::Float;
+
+    pub fn sqrt(value: Float) -> Float {
+        libm::Libm::<Float>::sqrt(value)
+    }
+
+    pub fn fabs(value: Float) -> Float {
+        libm::Libm::<Float>::fabs(value)
+    }
+
+    pub fn exp(value: Float) -> Float {
+        libm::Libm::<Float>::exp(value)
+    }
+
+    pub fn sin(value: Float) -> Float {
+        libm::Libm::<Float>::sin(value)
+    }
+
+    pub fn cos(value: Float) -> Float {
+        libm::Libm::<Float>::cos(value)
+    }
+
+    pub fn tan_f64(value: f64) -> f64 {
+        libm::tan(value)
+    }
+
+    pub fn asin(value: Float) -> Float {
+        libm::Libm::<Float>::asin(value)
+    }
+
+    pub fn acos(value: Float) -> Float {
+        libm::Libm::<Float>::acos(value)
+    }
+
+    pub fn atan2(value: Float, other: Float) -> Float {
+        libm::Libm::<Float>::atan2(value, other)
+    }
+}
 
 #[cfg(feature = "f32")]
 use core::f32::consts as fc;
@@ -76,7 +162,7 @@ impl From<[Float; 4]> for Quaternion {
 
 impl Quaternion {
     pub fn norm(&self) -> Float {
-        Math::<Float>::sqrt(square(self.0) + square(self.1) + square(self.2) + square(self.3))
+        math::sqrt(square(self.0) + square(self.1) + square(self.2) + square(self.3))
     }
 
     pub fn normalize(&mut self) {
@@ -104,8 +190,8 @@ impl Quaternion {
     }
 
     pub fn apply_delta(&self, delta: Float) -> Quaternion {
-        let c = Math::<Float>::cos(delta / 2.0);
-        let s = Math::<Float>::sin(delta / 2.0);
+        let c = math::cos(delta / 2.0);
+        let s = math::sin(delta / 2.0);
         let w = c * self.0 - s * self.3;
         let x = c * self.1 - s * self.2;
         let y = c * self.2 + s * self.1;
@@ -749,14 +835,6 @@ fn square(t: Float) -> Float {
     t * t
 }
 
-#[inline(always)]
-fn abs(t: Float) -> Float {
-    #[cfg(feature = "std")]
-    return t.abs();
-    #[cfg(feature = "libm")]
-    return Math::<Float>::fabs(t);
-}
-
 #[cfg_attr(doc, doc = include_str!("../katex.html"))]
 impl VQF {
     /// Creates a new VQF instance.
@@ -814,9 +892,9 @@ impl VQF {
             let bias_clip = self.params.bias_clip * (fc::PI / 180.0);
             if self.state.rest_last_squared_deviations[0]
                 >= square(self.params.rest_th_gyr * (fc::PI / 180.0))
-                || abs(self.state.rest_last_gyr_lp[0]) > bias_clip
-                || abs(self.state.rest_last_gyr_lp[1]) > bias_clip
-                || abs(self.state.rest_last_gyr_lp[2]) > bias_clip
+                || math::fabs(self.state.rest_last_gyr_lp[0]) > bias_clip
+                || math::fabs(self.state.rest_last_gyr_lp[1]) > bias_clip
+                || math::fabs(self.state.rest_last_gyr_lp[2]) > bias_clip
             {
                 self.state.rest_t = 0.0;
                 self.state.rest_detected = false;
@@ -834,8 +912,8 @@ impl VQF {
         let gyr_norm = Self::norm(&gyr_no_bias);
         let angle = gyr_norm * self.coeffs.gyr_ts;
         if gyr_norm > Float::EPSILON {
-            let c = Math::<Float>::cos(angle / 2.0);
-            let s = Math::<Float>::sin(angle / 2.0) / gyr_norm;
+            let c = math::cos(angle / 2.0);
+            let s = math::sin(angle / 2.0) / gyr_norm;
             let gyr_step_quat = [
                 c,
                 s * gyr_no_bias[0],
@@ -904,7 +982,7 @@ impl VQF {
         Self::normalize(&mut acc_earth);
 
         // inclination correction
-        let q_w = Math::<Float>::sqrt((acc_earth[2] + 1.0) / 2.0);
+        let q_w = math::sqrt((acc_earth[2] + 1.0) / 2.0);
         let acc_corr_quat: Quaternion = if q_w > 1e-6 {
             [
                 q_w,
@@ -922,7 +1000,7 @@ impl VQF {
 
         // calculate correction angular rate to facilitate debugging
         self.state.last_acc_corr_angular_rate =
-            Math::<Float>::acos(acc_earth[2]) / self.coeffs.acc_ts;
+            math::acos(acc_earth[2]) / self.coeffs.acc_ts;
 
         // bias estimation
         #[cfg(feature = "motion-bias-estimation")]
@@ -1110,7 +1188,7 @@ impl VQF {
         if self.params.mag_dist_rejection_enabled {
             self.state.mag_norm_dip[0] = Self::norm(&mag_earth);
             self.state.mag_norm_dip[1] =
-                -Math::<Float>::asin(mag_earth[2] / self.state.mag_norm_dip[0]);
+                -math::asin(mag_earth[2] / self.state.mag_norm_dip[0]);
 
             if self.params.mag_current_tau > 0.0 {
                 Self::filter_vec(
@@ -1125,9 +1203,9 @@ impl VQF {
             }
 
             // magnetic disturbance detection
-            if abs(self.state.mag_norm_dip[0] - self.state.mag_ref_norm)
+            if math::fabs(self.state.mag_norm_dip[0] - self.state.mag_ref_norm)
                 < self.params.mag_norm_th * self.state.mag_ref_norm
-                && abs(self.state.mag_norm_dip[1] - self.state.mag_ref_dip)
+                && math::fabs(self.state.mag_norm_dip[1] - self.state.mag_ref_dip)
                     < self.params.mag_dip_th * (fc::PI / 180.0)
             {
                 self.state.mag_undisturbed_t += self.coeffs.mag_ts;
@@ -1144,9 +1222,9 @@ impl VQF {
             }
 
             // new magnetic field acceptance
-            if abs(self.state.mag_norm_dip[0] - self.state.mag_candidate_norm)
+            if math::fabs(self.state.mag_norm_dip[0] - self.state.mag_candidate_norm)
                 < self.params.mag_norm_th * self.state.mag_candidate_norm
-                && abs(self.state.mag_norm_dip[1] - self.state.mag_candidate_dip)
+                && math::fabs(self.state.mag_norm_dip[1] - self.state.mag_candidate_dip)
                     < self.params.mag_dip_th * (fc::PI / 180.0)
             {
                 if Self::norm(&self.state.rest_last_gyr_lp)
@@ -1178,7 +1256,7 @@ impl VQF {
 
         // calculate disagreement angle based on current magnetometer measurement
         self.state.last_mag_dis_angle =
-            Math::<Float>::atan2(mag_earth[0], mag_earth[1]) - self.state.delta;
+            math::atan2(mag_earth[0], mag_earth[1]) - self.state.delta;
 
         // make sure the disagreement angle is in the range [-pi, pi]
         if self.state.last_mag_dis_angle > fc::PI {
@@ -1278,19 +1356,19 @@ impl VQF {
     pub fn bias_estimate(&self) -> ([Float; 3], Float) {
         // use largest absolute row sum as upper bound estimate for largest eigenvalue (Gershgorin circle theorem)
         // and clip output to biasSigmaInit
-        let sum1 = abs(self.state.bias_p.0[0][0])
-            + abs(self.state.bias_p.0[0][1])
-            + abs(self.state.bias_p.0[0][2]);
-        let sum2 = abs(self.state.bias_p.0[1][0])
-            + abs(self.state.bias_p.0[1][1])
-            + abs(self.state.bias_p.0[1][2]);
-        let sum3 = abs(self.state.bias_p.0[2][0])
-            + abs(self.state.bias_p.0[2][1])
-            + abs(self.state.bias_p.0[2][2]);
+        let sum1 = math::fabs(self.state.bias_p.0[0][0])
+            + math::fabs(self.state.bias_p.0[0][1])
+            + math::fabs(self.state.bias_p.0[0][2]);
+        let sum2 = math::fabs(self.state.bias_p.0[1][0])
+            + math::fabs(self.state.bias_p.0[1][1])
+            + math::fabs(self.state.bias_p.0[1][2]);
+        let sum3 = math::fabs(self.state.bias_p.0[2][0])
+            + math::fabs(self.state.bias_p.0[2][1])
+            + math::fabs(self.state.bias_p.0[2][2]);
         let p = sum1.max(sum2).max(sum3).min(self.coeffs.bias_p0);
         (
             self.state.bias,
-            Math::<Float>::sqrt(p) * (fc::PI / 100.0 / 180.0),
+            math::sqrt(p) * (fc::PI / 100.0 / 180.0),
         )
     }
 
@@ -1302,7 +1380,7 @@ impl VQF {
     pub fn bias_estimate(&self) -> ([Float; 3], Float) {
         (
             self.state.bias,
-            Math::<Float>::sqrt(self.state.bias_p) * (fc::PI / 100.0 / 180.0),
+            math::sqrt(self.state.bias_p) * (fc::PI / 100.0 / 180.0),
         )
     }
 
@@ -1342,9 +1420,9 @@ impl VQF {
     /// relative to the threshold. In order for rest to be detected, both values must stay below 1.
     pub fn relative_rest_deviations(&self) -> [Float; 2] {
         [
-            Math::<Float>::sqrt(self.state.rest_last_squared_deviations[0])
+            math::sqrt(self.state.rest_last_squared_deviations[0])
                 / (self.params.rest_th_gyr * (fc::PI / 180.0)),
-            Math::<Float>::sqrt(self.state.rest_last_squared_deviations[1])
+            math::sqrt(self.state.rest_last_squared_deviations[1])
                 / self.params.rest_th_acc,
         ]
     }
@@ -1571,7 +1649,7 @@ impl VQF {
         for i in vec {
             s += i * i;
         }
-        Math::<Float>::sqrt(s)
+        math::sqrt(s)
     }
 
     fn normalize<const N: usize>(vec: &mut [Float; N]) {
@@ -1601,7 +1679,7 @@ impl VQF {
         } else if tau == 0.0 {
             1.0 // k=1 for tau=0
         } else {
-            1.0 - Math::<Float>::exp(-ts / tau) // fc = 1/(2*pi*tau)
+            1.0 - math::exp(-ts / tau) // fc = 1/(2*pi*tau)
         }
     }
 
@@ -1610,7 +1688,7 @@ impl VQF {
         assert!(ts > 0.0);
         // second order Butterworth filter based on https://stackoverflow.com/a/52764064
         let fc = (f64c::SQRT_2 / (2.0 * f64c::PI)) / (tau as f64); // time constant of dampened, non-oscillating part of step response
-        let c = Math::<f64>::tan(f64c::PI * fc * (ts as f64));
+        let c = math::tan_f64(f64c::PI * fc * ts as f64);
         let d = c * c + f64c::SQRT_2 * c + 1.0;
         let b0 = c * c / d;
         out_b[0] = b0;
