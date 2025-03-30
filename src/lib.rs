@@ -872,6 +872,11 @@ impl VQF {
     /// It is only necessary to call this function directly if gyroscope, accelerometers and magnetometers have
     /// different sampling rates. Otherwise, simply use [`update()`](Self::update()).
     pub fn update_gyr(&mut self, gyr: [Float; 3]) {
+        self.update_gyr_with_ts(gyr, self.coeffs.gyr_ts);
+    }
+
+    /// Performs gyroscope update step, using a specified timestep for integration.
+    pub fn update_gyr_with_ts(&mut self, gyr: [Float; 3], ts: Float) {
         // rest detection
         if self.params.rest_bias_est_enabled || self.params.mag_dist_rejection_enabled {
             Self::filter_vec(
@@ -910,7 +915,7 @@ impl VQF {
 
         // gyroscope prediction step
         let gyr_norm = Self::norm(&gyr_no_bias);
-        let angle = gyr_norm * self.coeffs.gyr_ts;
+        let angle = gyr_norm * ts;
         if gyr_norm > Float::EPSILON {
             let c = math::cos(angle / 2.0);
             let s = math::sin(angle / 2.0) / gyr_norm;
